@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 const baseURL = "https://api.influitive.com"
@@ -19,7 +20,7 @@ func NewClient(token, orgID string) (Client, error) {
 	return Client{token, orgID}, nil
 }
 
-type Contact struct {
+type Member struct {
 	ID             int64  `json:"id"`
 	Name           string `json:"name"`
 	FirstName      string `json:"first_name"`
@@ -35,7 +36,10 @@ type Contact struct {
 	CurrentPoints  int64  `json:"current_points"`
 	LifetimePoints int64  `json:"lifetime_points"`
 	CRMContactID   string `json:"crm_contact_id"`
-	Level          Level  `json:"level"`
+	// SalesforceID   interface{} `json:"salesforce_id"`
+	Level  Level  `json:"level"`
+	Source string `json:"source"`
+	Thumb  string `json:"thumb"`
 }
 
 type Level struct {
@@ -44,8 +48,8 @@ type Level struct {
 }
 
 type contactsResponse struct {
-	Links    Links     `json:"links"`
-	Contacts []Contact `json:"contacts"`
+	Links   Links    `json:"links"`
+	Members []Member `json:"contacts"`
 }
 
 type Links struct {
@@ -53,8 +57,8 @@ type Links struct {
 	Next string `json:"next"`
 }
 
-func httpDo(client Client, method, endpoint string, payload io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", baseURL, endpoint), payload)
+func httpDo(client Client, method, url string, payload io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -68,35 +72,57 @@ func httpDo(client Client, method, endpoint string, payload io.Reader) (*http.Re
 }
 
 // https://influitive.readme.io/reference#query-for-contacts-from-your-advocatehub
-func GetAllMembers(client Client) ([]Contact, error) {
-	resp, err := httpDo(client, http.MethodGet, "/contacts", nil)
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve list of members: %v", err)
-	}
-	defer resp.Body.Close()
+func QueryMembersByField(client Client, field, value string) ([]Member, error) {
+	members := make([]Member, 0)
 
-	if resp.StatusCode != http.StatusOK {
-		if body, err := ioutil.ReadAll(resp.Body); err == nil {
-			fmt.Println(string(body))
+	// TODO: better error handling
+
+	next := fmt.Sprintf("%s/contacts", baseURL)
+	qp := url.Values{}
+	if len(field) > 0 {
+		qp.Set(fmt.Sprintf("q[%s]", field), value)
+		next += "?" + qp.Encode()
+	}
+
+	for {
+		if len(next) == 0 {
+			break
 		}
-		return nil, fmt.Errorf("influitive did not return good status: %s", resp.Status)
+
+		resp, err := httpDo(client, http.MethodGet, next, nil)
+		if err != nil {
+			return nil, fmt.Errorf("unable to retrieve list of members: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			if body, err := ioutil.ReadAll(resp.Body); err == nil {
+				fmt.Println(string(body))
+			}
+			return nil, fmt.Errorf("influitive did not return a good response status: %s", resp.Status)
+		}
+
+		var contactsResp contactsResponse
+		if err := json.NewDecoder(resp.Body).Decode(&contactsResp); err != nil {
+			return nil, fmt.Errorf("unable to read message body as members: %v", err)
+		}
+
+		members = append(members, contactsResp.Members...)
+		next = contactsResp.Links.Next
 	}
 
-	var contactsResp contactsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&contactsResp); err != nil {
-		return nil, fmt.Errorf("unable to read message body as members: %v", err)
-	}
+	return members, nil
+}
 
-	// TODO: pagination
-
-	return contactsResp.Contacts, nil
+func GetAllMembers(client Client) ([]Member, error) {
+	return QueryMembersByField(client, "", "")
 }
 
 // https://influitive.readme.io/reference#get-information-about-your-own-member-record
-func GetMe(client Client) (Contact, error) {
-	resp, err := httpDo(client, http.MethodGet, "/members/me", nil)
+func GetMe(client Client) (Member, error) {
+	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members/me", baseURL), nil)
 	if err != nil {
-		return Contact{}, fmt.Errorf("unable to retrieve details of logged in user: %v", err)
+		return Member{}, fmt.Errorf("unable to retrieve details of logged in user: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -104,13 +130,48 @@ func GetMe(client Client) (Contact, error) {
 		if body, err := ioutil.ReadAll(resp.Body); err == nil {
 			fmt.Println(string(body))
 		}
-		return Contact{}, fmt.Errorf("influitive did not return good status: %s", resp.Status)
+		return Member{}, fmt.Errorf("influitive did not return good status: %s", resp.Status)
 	}
 
-	var contact Contact
-	if err := json.NewDecoder(resp.Body).Decode(&contact); err != nil {
-		return Contact{}, fmt.Errorf("unable to read message body as member details: %v", err)
+	var member Member
+	if err := json.NewDecoder(resp.Body).Decode(&member); err != nil {
+		return Member{}, fmt.Errorf("unable to read message body as member details: %v", err)
 	}
 
-	return contact, nil
+	return member, nil
+}
+
+type eventResponse struct {
+	ID            int64      `json:"id"`
+	EventTypeCode string     `json:"event_type_code"`
+	Points        int64      `json:"points"`
+	Member        Member     `json:"contact"`
+	Parameters    Parameters `json:"parameters"`
+}
+
+type Parameters struct {
+}
+
+// https://influitive.readme.io/reference#events
+func LogEvent(client Client, eventType, memberID string) error {
+	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/events", baseURL), nil)
+	if err != nil {
+		return fmt.Errorf("unable to retrieve details of logged in user: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			fmt.Println(string(body))
+		}
+		return fmt.Errorf("influitive did not return good status: %s", resp.Status)
+	}
+
+	var evResp eventResponse
+	if err := json.NewDecoder(resp.Body).Decode(&evResp); err != nil {
+		return fmt.Errorf("unable to read message body as member details: %v", err)
+	}
+
+	return nil
+
 }
