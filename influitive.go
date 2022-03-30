@@ -89,6 +89,7 @@ func QueryMembersByField(client Client, field, value string) ([]Member, error) {
 	next := fmt.Sprintf("%s/contacts", baseURL)
 	qp := url.Values{}
 	if len(field) > 0 {
+		qp.Set("q[status]", "all")
 		qp.Set(fmt.Sprintf("q[%s]", field), value)
 		next += "?" + qp.Encode()
 	}
@@ -194,11 +195,12 @@ type createMemberRequest struct {
 	SalesforceID  string            `json:"salesforce_id"`
 	MatchCriteria map[string]string `json:"match_criteria"`
 	Type          string            `json:"type"`
+	ExternalIDS   map[string]string `json:"external_ids"`
 }
 
 // https://influitive.readme.io/reference#create-a-member-identified-by-email
-func CreateMemberByEmail(client Client, email, name, source string) (Member, error) {
-	create := createMemberRequest{Email: email, Name: name, Source: source, Type: "Nominee"}
+func CreateMemberByEmail(client Client, email, name, source, ssoId string) (Member, error) {
+	create := createMemberRequest{Email: email, Name: name, Source: source, Type: "Nominee", ExternalIDS: map[string]string{"sso_contact_id": ssoId}}
 	buf, err := json.Marshal(create)
 	if err != nil {
 		return Member{}, err
