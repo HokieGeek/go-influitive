@@ -49,9 +49,9 @@ func httpDo(client Client, method, endpoint string, payload io.Reader) (*http.Re
 		return nil, err
 	}
 
-	req.SetBasicAuth("Token", client.Token)
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Token %s", client.Token))
 	req.Header.Set("X_ORG_ID", client.OrgID)
+	req.Header.Set("Accept", "application/json")
 
 	httpClient := &http.Client{}
 	return httpClient.Do(req)
