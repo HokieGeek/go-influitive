@@ -43,6 +43,16 @@ type Level struct {
 	Name string `json:"name"`
 }
 
+type contactsResponse struct {
+	Links    Links     `json:"links"`
+	Contacts []Contact `json:"contacts"`
+}
+
+type Links struct {
+	Self string `json:"self"`
+	Next string `json:"next"`
+}
+
 func httpDo(client Client, method, endpoint string, payload io.Reader) (*http.Response, error) {
 	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", baseURL, endpoint), payload)
 	if err != nil {
@@ -72,12 +82,14 @@ func GetAllMembers(client Client) ([]Contact, error) {
 		return nil, fmt.Errorf("influitive did not return good status: %s", resp.Status)
 	}
 
-	var contacts []Contact
-	if err := json.NewDecoder(resp.Body).Decode(&contacts); err != nil {
+	var contactsResp contactsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&contactsResp); err != nil {
 		return nil, fmt.Errorf("unable to read message body as members: %v", err)
 	}
 
-	return contacts, nil
+	// TODO: pagination
+
+	return contactsResp.Contacts, nil
 }
 
 // https://influitive.readme.io/reference#get-information-about-your-own-member-record
