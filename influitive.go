@@ -22,25 +22,32 @@ func NewClient(token, orgID string) (Client, error) {
 }
 
 type Member struct {
-	ID             int64  `json:"id"`
-	Name           string `json:"name"`
-	FirstName      string `json:"first_name"`
-	LastName       string `json:"last_name"`
-	Email          string `json:"email"`
-	Title          string `json:"title"`
-	Company        string `json:"company"`
-	UUID           string `json:"uuid"`
-	Type           string `json:"type"`
-	CreatedAt      string `json:"created_at"`
-	JoinedAt       string `json:"joined_at"`
-	NpsScore       int64  `json:"nps_score"`
-	CurrentPoints  int64  `json:"current_points"`
-	LifetimePoints int64  `json:"lifetime_points"`
-	CRMContactID   string `json:"crm_contact_id"`
-	// SalesforceID   interface{} `json:"salesforce_id"`
-	Level  Level  `json:"level"`
-	Source string `json:"source"`
-	Thumb  string `json:"thumb"`
+	ID              int64             `json:"id"`
+	Name            string            `json:"name"`
+	FirstName       string            `json:"first_name"`
+	LastName        string            `json:"last_name"`
+	Email           string            `json:"email"`
+	Title           string            `json:"title"`
+	Company         string            `json:"company"`
+	UUID            string            `json:"uuid"`
+	Type            string            `json:"type"`
+	CreatedAt       string            `json:"created_at"`
+	JoinedAt        string            `json:"joined_at"`
+	LockedAt        string            `json:"locked_at"`
+	ExternalIDS     map[string]string `json:"external_ids"`
+	MatchCategories map[string]string `json:"match_categories"`
+	CustomFields    map[string]string `json:"custom_fields"`
+	NpsScore        int64             `json:"nps_score"`
+	CurrentPoints   int64             `json:"current_points"`
+	LifetimePoints  int64             `json:"lifetime_points"`
+	CRMContactID    string            `json:"crm_contact_id"`
+	SalesforceID    string            `json:"salesforce_id"`
+	InviteLink      string            `json:"invite_link"`
+	Language        string            `json:"language"`
+	Address         string            `json:"address"`
+	Level           Level             `json:"level"`
+	Source          string            `json:"source"`
+	Thumb           string            `json:"thumb"`
 }
 
 type Level struct {
@@ -49,11 +56,11 @@ type Level struct {
 }
 
 type contactsResponse struct {
-	Links   Links    `json:"links"`
+	Links   links    `json:"links"`
 	Members []Member `json:"contacts"`
 }
 
-type Links struct {
+type links struct {
 	Self string `json:"self"`
 	Next string `json:"next"`
 }
@@ -196,7 +203,6 @@ func CreateMemberByEmail(client Client, email, name, source string) (Member, err
 	if err != nil {
 		return Member{}, err
 	}
-	fmt.Println(string(buf))
 
 	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/members", baseURL), bytes.NewBuffer(buf))
 	if err != nil {
@@ -204,7 +210,7 @@ func CreateMemberByEmail(client Client, email, name, source string) (Member, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
 		if body, err := ioutil.ReadAll(resp.Body); err == nil {
 			fmt.Println(string(body))
 		}
