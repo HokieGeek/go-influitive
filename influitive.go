@@ -1,6 +1,7 @@
 package influitive
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -174,4 +175,63 @@ func LogEvent(client Client, eventType, memberID string) error {
 
 	return nil
 
+}
+
+type createMemberRequest struct {
+	Email         string            `json:"email"`
+	Name          string            `json:"name"`
+	Source        string            `json:"source"`
+	Title         string            `json:"title"`
+	Company       string            `json:"company"`
+	SalesforceID  string            `json:"salesforce_id"`
+	MatchCriteria map[string]string `json:"match_criteria"`
+	Type          string            `json:"type"`
+}
+
+// https://influitive.readme.io/reference#create-a-member-identified-by-email
+func CreateMemberByEmail(client Client, email, name, source string) (Member, error) {
+	create := createMemberRequest{Email: email, Name: name, Source: source, Type: "Nominee"}
+	buf, err := json.Marshal(create)
+	if err != nil {
+		return Member{}, err
+	}
+
+	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/members", baseURL), bytes.NewBuffer(buf))
+	if err != nil {
+		return Member{}, fmt.Errorf("unable to create member: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			fmt.Println(string(body))
+		}
+		return Member{}, fmt.Errorf("influitive did not return good status: %s", resp.Status)
+	}
+
+	var member Member
+	if err := json.NewDecoder(resp.Body).Decode(&member); err != nil {
+		return Member{}, fmt.Errorf("unable to read message body as member details: %v", err)
+	}
+
+	return member, nil
+
+}
+
+func DeleteMemberByID(client Client, id int64) error {
+	resp, err := httpDo(client, http.MethodDelete, fmt.Sprintf("%s/members/%d", baseURL, id), nil)
+	if err != nil {
+		return fmt.Errorf("unable to retrieve details of logged in user: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if body, err := ioutil.ReadAll(resp.Body); err == nil {
+		fmt.Println(string(body))
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("influitive did not return good status: %s", resp.Status)
+	}
+
+	return nil
 }
