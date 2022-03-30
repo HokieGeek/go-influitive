@@ -67,6 +67,7 @@ func httpDo(client Client, method, url string, payload io.Reader) (*http.Respons
 	req.Header.Set("Authorization", fmt.Sprintf("Token %s", client.Token))
 	req.Header.Set("X_ORG_ID", client.OrgID)
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 
 	httpClient := &http.Client{}
 	return httpClient.Do(req)
@@ -195,6 +196,7 @@ func CreateMemberByEmail(client Client, email, name, source string) (Member, err
 	if err != nil {
 		return Member{}, err
 	}
+	fmt.Println(string(buf))
 
 	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/members", baseURL), bytes.NewBuffer(buf))
 	if err != nil {
