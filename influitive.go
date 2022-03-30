@@ -57,6 +57,7 @@ func httpDo(client Client, method, endpoint string, payload io.Reader) (*http.Re
 	return httpClient.Do(req)
 }
 
+// https://influitive.readme.io/reference#query-for-contacts-from-your-advocatehub
 func GetAllMembers(client Client) ([]Contact, error) {
 	resp, err := httpDo(client, http.MethodGet, "/contacts", nil)
 	if err != nil {
@@ -72,9 +73,32 @@ func GetAllMembers(client Client) ([]Contact, error) {
 	}
 
 	var contacts []Contact
-	if err := json.NewDecoder(resp.Body).Decode(contacts); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&contacts); err != nil {
 		return nil, fmt.Errorf("unable to read message body as members: %v", err)
 	}
 
 	return contacts, nil
+}
+
+// https://influitive.readme.io/reference#get-information-about-your-own-member-record
+func GetMe(client Client) (Contact, error) {
+	resp, err := httpDo(client, http.MethodGet, "/members/me", nil)
+	if err != nil {
+		return Contact{}, fmt.Errorf("unable to retrieve details of logged in user: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			fmt.Println(string(body))
+		}
+		return Contact{}, fmt.Errorf("influitive did not return good status: %s", resp.Status)
+	}
+
+	var contact Contact
+	if err := json.NewDecoder(resp.Body).Decode(&contact); err != nil {
+		return Contact{}, fmt.Errorf("unable to read message body as member details: %v", err)
+	}
+
+	return contact, nil
 }
