@@ -3,6 +3,7 @@ package influitive
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -195,12 +196,11 @@ type createMemberRequest struct {
 	SalesforceID  string            `json:"salesforce_id"`
 	MatchCriteria map[string]string `json:"match_criteria"`
 	Type          string            `json:"type"`
-	ExternalIDS   map[string]string `json:"external_ids"`
 }
 
 // https://influitive.readme.io/reference#create-a-member-identified-by-email
-func CreateMemberByEmail(client Client, email, name, source, ssoId string) (Member, error) {
-	create := createMemberRequest{Email: email, Name: name, Source: source, Type: "Nominee", ExternalIDS: map[string]string{"sso_contact_id": ssoId}}
+func CreateMemberByEmail(client Client, email, name, source string) (Member, error) {
+	create := createMemberRequest{Email: email, Name: name, Source: source, Type: "Nominee"}
 	buf, err := json.Marshal(create)
 	if err != nil {
 		return Member{}, err
@@ -225,23 +225,56 @@ func CreateMemberByEmail(client Client, email, name, source, ssoId string) (Memb
 	}
 
 	return member, nil
+}
+
+type inviteResponse struct {
+	Status     string `json:"status"`
+	InviteLink string `json:"invite_link"`
+}
+
+// https://influitive.readme.io/reference#invite-a-member-identified-by-id
+func InviteMember(client Client, id int64, sendEmail bool) error {
+	reqBody := fmt.Sprintf(`{"deliver_emails":%v}`, sendEmail)
+
+	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/members/%d/invitations", baseURL, id), bytes.NewBufferString(reqBody))
+	if err != nil {
+		return fmt.Errorf("unable to invite member: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			fmt.Println(string(body))
+		}
+		return fmt.Errorf("influitive did not return good status: %s", resp.Status)
+	}
+
+	var invResp inviteResponse
+	if err := json.NewDecoder(resp.Body).Decode(&invResp); err != nil {
+		return fmt.Errorf("unable to read message body as invitation response: %v", err)
+	}
+
+	return nil
 
 }
 
 func DeleteMemberByID(client Client, id int64) error {
-	resp, err := httpDo(client, http.MethodDelete, fmt.Sprintf("%s/members/%d", baseURL, id), nil)
-	if err != nil {
-		return fmt.Errorf("unable to retrieve details of logged in user: %v", err)
-	}
-	defer resp.Body.Close()
+	return errors.New("NOT IMPLEMENTED")
+	/*
+		resp, err := httpDo(client, http.MethodDelete, fmt.Sprintf("%s/members/%d", baseURL, id), nil)
+		if err != nil {
+			return fmt.Errorf("unable to retrieve details of logged in user: %v", err)
+		}
+		defer resp.Body.Close()
 
-	if body, err := ioutil.ReadAll(resp.Body); err == nil {
-		fmt.Println(string(body))
-	}
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			fmt.Println(string(body))
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("influitive did not return good status: %s", resp.Status)
-	}
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("influitive did not return good status: %s", resp.Status)
+		}
 
-	return nil
+		return nil
+	*/
 }
