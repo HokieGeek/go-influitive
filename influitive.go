@@ -242,7 +242,7 @@ func InviteMember(client Client, id int64, sendEmail bool) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
 		if body, err := ioutil.ReadAll(resp.Body); err == nil {
 			fmt.Println(string(body))
 		}
