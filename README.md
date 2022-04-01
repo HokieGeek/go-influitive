@@ -1,6 +1,6 @@
 # go-influitive
 
-[![GoDoc](https://pkg.go.dev/badge/github.com/HokieGeek/go-influitive?status.svg)](https://pkg.go.dev/github.com/HokieGeek/go-influitive?tab=doc)
+[![GoDoc](https://pkg.go.dev/badge/github.com/hokiegeek/go-influitive?status.svg)](https://pkg.go.dev/github.com/hokiegeek/go-influitive?tab=doc)
 
 A quick and dirty implementation of some calls from the Influitive API (<https://influitive.readme.io/reference>) used for testing and discovery when implementing integrations.
 

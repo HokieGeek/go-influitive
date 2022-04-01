@@ -258,6 +258,7 @@ func InviteMember(client Client, id int64, sendEmail bool) error {
 
 }
 
+// DeleteMemberByID is not implemented as there is no API to do this
 func DeleteMemberByID(client Client, id int64) error {
 	return errors.New("NOT IMPLEMENTED")
 	/*
