@@ -183,11 +183,12 @@ type parameters struct {
 }
 
 // https://influitive.readme.io/reference#events
-func LogEventByMemberID(client Client, eventType string, memberID, points int64) error {
+func logEvent(client Client, eventType, challengeCode string, memberID, points int64) error {
 	req := logEventRequest{
 		Type:    eventType,
 		Contact: contact{ID: strconv.FormatInt(memberID, 10)},
 		Points:  strconv.FormatInt(points, 10),
+		Stage:   stage{Code: challengeCode},
 	}
 	buf, err := json.Marshal(req)
 	if err != nil {
@@ -214,6 +215,14 @@ func LogEventByMemberID(client Client, eventType string, memberID, points int64)
 
 	return nil
 
+}
+
+func LogMemberEvent(client Client, eventType string, memberID, points int64) error {
+	return logEvent(client, eventType, "", memberID, points)
+}
+
+func LogMemberChallengeEvent(client Client, eventType, challengeCode string, memberID, points int64) error {
+	return logEvent(client, eventType, challengeCode, memberID, points)
 }
 
 type createMemberRequest struct {
