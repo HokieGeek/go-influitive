@@ -153,7 +153,6 @@ func GetMe(client Client) (Member, error) {
 	return member, nil
 }
 
-/*
 type eventMember struct {
 	ID           string `json:"id"`
 	Email        string `json:"email"`
@@ -162,14 +161,12 @@ type eventMember struct {
 	LastName     string `json:"last_name"`
 }
 
-*/
-
 type logEventRequest struct {
-	Type   string `json:"type"`
-	Member Member `json:"member"`
-	Notes  string `json:"notes"`
-	Link   string `json:"link"`
-	Points string `json:"points"`
+	Type   string      `json:"type"`
+	Member eventMember `json:"member"`
+	Notes  string      `json:"notes"`
+	Link   string      `json:"link"`
+	Points string      `json:"points"`
 }
 
 type logCustomEventRequest struct {
@@ -209,7 +206,15 @@ func logEvent(client Client, eventType string, member Member, points int64) erro
 		Type: eventType,
 		// Member: eventMember{ID: strconv.FormatInt(memberID, 10)},
 		// Member: Member{ID: memberID},
-		Member: member,
+		Member: eventMember{
+			ID:           strconv.FormatInt(member.ID, 10),
+			Email:        member.Email,
+			CRMContactID: member.CRMContactID,
+			FirstName:    member.FirstName,
+			LastName:     member.LastName,
+		},
+		Notes:  "Testing out this feature",
+		Link:   "",
 		Points: strconv.FormatInt(points, 10),
 	}
 	buf, err := json.Marshal(req)
