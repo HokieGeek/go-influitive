@@ -131,7 +131,9 @@ func GetAllMembers(client Client) ([]Member, error) {
 }
 
 func GetMemberByEmail(client Client, email string) (Member, error) {
-	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members/me?email=%s", baseURL, email), nil)
+	qp := url.Values{}
+	qp.Set("email", email)
+	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members/me?email=%s", baseURL, qp.Encode()), nil)
 	if err != nil {
 		return Member{}, fmt.Errorf("unable to retrieve details of member by email: %v", err)
 	}
