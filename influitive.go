@@ -133,7 +133,7 @@ func GetAllMembers(client Client) ([]Member, error) {
 func GetMemberByEmail(client Client, email string) (Member, error) {
 	qp := url.Values{}
 	qp.Set("email", email)
-	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members/me?email=%s", baseURL, qp.Encode()), nil)
+	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members?%s", baseURL, qp.Encode()), nil)
 	if err != nil {
 		return Member{}, fmt.Errorf("unable to retrieve details of member by email: %v", err)
 	}
@@ -146,12 +146,18 @@ func GetMemberByEmail(client Client, email string) (Member, error) {
 		return Member{}, fmt.Errorf("influitive did not return good status: %s", resp.Status)
 	}
 
-	var member Member
-	if err := json.NewDecoder(resp.Body).Decode(&member); err != nil {
+	var members []Member
+	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
 		return Member{}, fmt.Errorf("unable to read message body as member details: %v", err)
 	}
 
-	return member, nil
+	if len(members) > 1 {
+		return Member{}, errors.New("found more than 1 member with given email address")
+	} else if len(members) == 0 {
+		return Member{}, errors.New("did not find a member with the given email address")
+	}
+
+	return members[0], nil
 
 }
 
