@@ -183,11 +183,11 @@ type parameters struct {
 }
 
 // https://influitive.readme.io/reference#events
-// func LogEventByMemberID(client Client, eventType, memberID string) error {
-func LogEvent(client Client, eventType string, memberID int64) error {
+func LogEventByMemberID(client Client, eventType string, memberID, points int64) error {
 	req := logEventRequest{
 		Type:    eventType,
 		Contact: contact{ID: strconv.FormatInt(memberID, 10)},
+		Points:  strconv.FormatInt(points, 10),
 	}
 	buf, err := json.Marshal(req)
 	if err != nil {
