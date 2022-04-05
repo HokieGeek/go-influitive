@@ -130,6 +130,29 @@ func GetAllMembers(client Client) ([]Member, error) {
 	return QueryMembersByField(client, "", "")
 }
 
+func GetMemberByEmail(client Client, email string) (Member, error) {
+	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members/me?email=%s", baseURL, email), nil)
+	if err != nil {
+		return Member{}, fmt.Errorf("unable to retrieve details of member by email: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		if body, err := ioutil.ReadAll(resp.Body); err == nil {
+			fmt.Println(string(body))
+		}
+		return Member{}, fmt.Errorf("influitive did not return good status: %s", resp.Status)
+	}
+
+	var member Member
+	if err := json.NewDecoder(resp.Body).Decode(&member); err != nil {
+		return Member{}, fmt.Errorf("unable to read message body as member details: %v", err)
+	}
+
+	return member, nil
+
+}
+
 // https://influitive.readme.io/reference#get-information-about-your-own-member-record
 func GetMe(client Client) (Member, error) {
 	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members/me", baseURL), nil)
