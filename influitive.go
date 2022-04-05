@@ -153,6 +153,7 @@ func GetMe(client Client) (Member, error) {
 	return member, nil
 }
 
+/*
 type eventMember struct {
 	ID           string `json:"id"`
 	Email        string `json:"email"`
@@ -161,15 +162,14 @@ type eventMember struct {
 	LastName     string `json:"last_name"`
 }
 
-/*
- */
+*/
 
 type logEventRequest struct {
-	Type   string      `json:"type"`
-	Member eventMember `json:"member"`
-	Notes  string      `json:"notes"`
-	Link   string      `json:"link"`
-	Points string      `json:"points"`
+	Type   string `json:"type"`
+	Member Member `json:"member"`
+	Notes  string `json:"notes"`
+	Link   string `json:"link"`
+	Points string `json:"points"`
 }
 
 type logCustomEventRequest struct {
@@ -204,11 +204,12 @@ const (
 )
 
 // https://influitive.readme.io/reference#post-reference-type-events
-func logEvent(client Client, eventType string, memberID, points int64) error {
+func logEvent(client Client, eventType string, member Member, points int64) error {
 	req := logEventRequest{
-		Type:   eventType,
-		Member: eventMember{ID: strconv.FormatInt(memberID, 10)},
+		Type: eventType,
+		// Member: eventMember{ID: strconv.FormatInt(memberID, 10)},
 		// Member: Member{ID: memberID},
+		Member: member,
 		Points: strconv.FormatInt(points, 10),
 	}
 	buf, err := json.Marshal(req)
@@ -238,8 +239,8 @@ func logEvent(client Client, eventType string, memberID, points int64) error {
 
 }
 
-func LogEvent(client Client, eventType string, memberID, points int64) error {
-	return logEvent(client, eventType, memberID, points)
+func LogEvent(client Client, eventType string, member Member, points int64) error {
+	return logEvent(client, eventType, member, points)
 }
 
 // https://influitive.readme.io/reference#events
