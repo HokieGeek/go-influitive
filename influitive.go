@@ -280,10 +280,10 @@ func LogEvent(client Client, eventType string, member Member, points int64) erro
 }
 
 // https://influitive.readme.io/reference#events
-func logCustomEvent(client Client, eventType, challengeCode string, memberID, points int64) error {
+func logCustomEvent(client Client, eventType, challengeCode string, member Member, points int64) error {
 	req := logCustomEventRequest{
 		Type:    eventType,
-		Contact: contact{ID: strconv.FormatInt(memberID, 10)},
+		Contact: contact{ID: strconv.FormatInt(member.ID, 10)},
 		Points:  strconv.FormatInt(points, 10),
 		Stage:   stage{Code: challengeCode},
 	}
