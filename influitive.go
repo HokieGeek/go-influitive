@@ -314,12 +314,12 @@ func logCustomEvent(client Client, eventType, challengeCode string, member Membe
 
 }
 
-func LogCustomEvent(client Client, eventType string, memberID, points int64) error {
-	return logCustomEvent(client, eventType, "", memberID, points)
+func LogCustomEvent(client Client, eventType string, member Member, points int64) error {
+	return logCustomEvent(client, eventType, "", member, points)
 }
 
-func LogCustomChallengeEvent(client Client, eventType, challengeCode string, memberID, points int64) error {
-	return logCustomEvent(client, eventType, challengeCode, memberID, points)
+func LogCustomChallengeEvent(client Client, eventType, challengeCode string, member Member, points int64) error {
+	return logCustomEvent(client, eventType, challengeCode, member, points)
 }
 
 type createMemberRequest struct {
