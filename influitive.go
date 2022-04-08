@@ -12,15 +12,14 @@ import (
 	"strconv"
 )
 
-const baseURL = "https://api.influitive.com"
-
 type Client struct {
-	Token string `json:"token"`
-	OrgID string `json:"orgId"`
+	BaseURL string `json:"baseUrl"`
+	Token   string `json:"token"`
+	OrgID   string `json:"orgId"`
 }
 
-func NewClient(token, orgID string) (Client, error) {
-	return Client{token, orgID}, nil
+func NewClient(baseURL, token, orgID string) (Client, error) {
+	return Client{baseURL, token, orgID}, nil
 }
 
 type Member struct {
@@ -88,7 +87,7 @@ func QueryMembersByField(client Client, field, value string) ([]Member, error) {
 
 	// TODO: better error handling
 
-	next := fmt.Sprintf("%s/contacts", baseURL)
+	next := fmt.Sprintf("%s/contacts", client.BaseURL)
 	qp := url.Values{}
 	if len(field) > 0 {
 		qp.Set("q[status]", "all")
@@ -133,7 +132,7 @@ func GetAllMembers(client Client) ([]Member, error) {
 func GetMemberByEmail(client Client, email string) (Member, error) {
 	qp := url.Values{}
 	qp.Set("email", email)
-	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members?%s", baseURL, qp.Encode()), nil)
+	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members?%s", client.BaseURL, qp.Encode()), nil)
 	if err != nil {
 		return Member{}, fmt.Errorf("unable to retrieve details of member by email: %v", err)
 	}
@@ -163,7 +162,7 @@ func GetMemberByEmail(client Client, email string) (Member, error) {
 
 // https://influitive.readme.io/reference#get-information-about-your-own-member-record
 func GetMe(client Client) (Member, error) {
-	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members/me", baseURL), nil)
+	resp, err := httpDo(client, http.MethodGet, fmt.Sprintf("%s/members/me", client.BaseURL), nil)
 	if err != nil {
 		return Member{}, fmt.Errorf("unable to retrieve details of logged in user: %v", err)
 	}
@@ -227,12 +226,8 @@ type logCustomEventResponse struct {
 type parameters struct {
 }
 
-const (
-	EventReferralSubmitted = "referral_submitted"
-)
-
 // https://influitive.readme.io/reference#post-reference-type-events
-func logEvent(client Client, eventType string, member Member, points int64) error {
+func logEvent(client Client, member Member, eventType string, points int64) error {
 	req := logEventRequest{
 		Type: eventType,
 		// Member: eventMember{ID: strconv.FormatInt(memberID, 10)},
@@ -253,7 +248,7 @@ func logEvent(client Client, eventType string, member Member, points int64) erro
 		return err
 	}
 
-	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/references/events", baseURL), bytes.NewBuffer(buf))
+	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/references/events", client.BaseURL), bytes.NewBuffer(buf))
 	if err != nil {
 		return fmt.Errorf("unable to retrieve details of logged in user: %v", err)
 	}
@@ -275,12 +270,12 @@ func logEvent(client Client, eventType string, member Member, points int64) erro
 
 }
 
-func LogEvent(client Client, eventType string, member Member, points int64) error {
-	return logEvent(client, eventType, member, points)
+func LogEvent(client Client, member Member, eventType string, points int64) error {
+	return logEvent(client, member, eventType, points)
 }
 
 // https://influitive.readme.io/reference#events
-func logCustomEvent(client Client, eventType, challengeCode string, member Member, points int64) error {
+func logCustomEvent(client Client, member Member, eventType, challengeCode string, points int64) error {
 	req := logCustomEventRequest{
 		Type:    eventType,
 		Contact: contact{ID: strconv.FormatInt(member.ID, 10)},
@@ -292,7 +287,7 @@ func logCustomEvent(client Client, eventType, challengeCode string, member Membe
 		return err
 	}
 
-	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/events", baseURL), bytes.NewBuffer(buf))
+	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/events", client.BaseURL), bytes.NewBuffer(buf))
 	if err != nil {
 		return fmt.Errorf("unable to retrieve details of logged in user: %v", err)
 	}
@@ -314,12 +309,12 @@ func logCustomEvent(client Client, eventType, challengeCode string, member Membe
 
 }
 
-func LogCustomEvent(client Client, eventType string, member Member, points int64) error {
-	return logCustomEvent(client, eventType, "", member, points)
+func LogCustomEvent(client Client, member Member, eventType string, points int64) error {
+	return logCustomEvent(client, member, eventType, "", points)
 }
 
-func LogCustomChallengeEvent(client Client, eventType, challengeCode string, member Member, points int64) error {
-	return logCustomEvent(client, eventType, challengeCode, member, points)
+func LogCustomChallengeEvent(client Client, member Member, eventType, challengeCode string) error {
+	return logCustomEvent(client, member, eventType, challengeCode, 0)
 }
 
 type createMemberRequest struct {
@@ -341,7 +336,7 @@ func CreateMemberByEmail(client Client, email, name, source string) (Member, err
 		return Member{}, err
 	}
 
-	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/members", baseURL), bytes.NewBuffer(buf))
+	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/members", client.BaseURL), bytes.NewBuffer(buf))
 	if err != nil {
 		return Member{}, fmt.Errorf("unable to create member: %v", err)
 	}
@@ -371,7 +366,7 @@ type inviteResponse struct {
 func InviteMember(client Client, id int64, sendEmail bool) error {
 	reqBody := fmt.Sprintf(`{"deliver_emails":%v}`, sendEmail)
 
-	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/members/%d/invitations", baseURL, id), bytes.NewBufferString(reqBody))
+	resp, err := httpDo(client, http.MethodPost, fmt.Sprintf("%s/members/%d/invitations", client.BaseURL, id), bytes.NewBufferString(reqBody))
 	if err != nil {
 		return fmt.Errorf("unable to invite member: %v", err)
 	}
@@ -397,7 +392,7 @@ func InviteMember(client Client, id int64, sendEmail bool) error {
 func DeleteMemberByID(client Client, id int64) error {
 	return errors.New("NOT IMPLEMENTED")
 	/*
-		resp, err := httpDo(client, http.MethodDelete, fmt.Sprintf("%s/members/%d", baseURL, id), nil)
+		resp, err := httpDo(client, http.MethodDelete, fmt.Sprintf("%s/members/%d", client.BaseURL, id), nil)
 		if err != nil {
 			return fmt.Errorf("unable to retrieve details of logged in user: %v", err)
 		}
