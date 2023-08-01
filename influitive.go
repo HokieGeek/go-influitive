@@ -22,6 +22,16 @@ func NewClient(baseURL, token, orgID string) (Client, error) {
 	return Client{baseURL, token, orgID}, nil
 }
 
+type memberAddress struct {
+	Address     string `json:"address"`
+	Address2    string `json:"address_2"`
+	PhoneNumber string `json:"phone_number"`
+	City        string `json:"city"`
+	State       string `json:"state"`
+	Country     string `json:"country"`
+	Zip         string `json:"zip"`
+}
+
 type Member struct {
 	ID              int64             `json:"id"`
 	Name            string            `json:"name"`
@@ -45,7 +55,7 @@ type Member struct {
 	SalesforceID    string            `json:"salesforce_id"`
 	InviteLink      string            `json:"invite_link"`
 	Language        string            `json:"language"`
-	Address         string            `json:"address"`
+	Address         memberAddress     `json:"address"`
 	Level           Level             `json:"level"`
 	Source          string            `json:"source"`
 	Thumb           string            `json:"thumb"`
